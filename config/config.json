@@ -1,0 +1,7 @@
+{
+    "Host": "localhost",
+    "User": "postgres",
+    "Password": "admin123",
+    "Database": "rush-travel",
+    "Port": 5432
+}
