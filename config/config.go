@@ -20,7 +20,7 @@ type Config struct {
 	Password     string
 	Database     string
 	Port         int
-	//JWTSignature string
+	JWTSignature string
 }
 
 var (

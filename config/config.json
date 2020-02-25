@@ -3,5 +3,6 @@
     "User": "postgres",
     "Password": "admin123",
     "Database": "rush-travel",
-    "Port": 5432
+    "Port": 5432,
+    "JWTSignature": "topsecret"
 }

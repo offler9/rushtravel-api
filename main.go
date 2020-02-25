@@ -1,63 +1,56 @@
 package main
 
 import (
-    "os"
-    "fmt"
-    "net/http"
-    "log"
-    "encoding/json"
-    "io/ioutil"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+
+	"github.com/rush-travel/config"
+	ep "github.com/rush-travel/endpoint"
+	"github.com/rush-travel/util"
 )
 
-const helloMessage = "Hello to the weather program. Please enter the name of the city and the weather will show."
-const googleApiUri = "https://maps.googleapis.com/maps/api/geocode/json?key=MYKEY&address="
-
-
-
-type googleApiResponse struct {
-    Results Results `json:"results"`
+type endpoint struct {
+	Method      string
+	URL         string
+	Description string
 }
-
-type Results []Geometry
-
-type Geometry struct {
-    Geometry Location `json:"geometry"`
-}
-
-type Location struct {
-    Location Coordinates `json:"location"`
-}
-
-type Coordinates struct {
-    Latitude float64 `json:"lat"`
-    Longitude float64 `json:"lng"`
-}
-
 
 func main() {
-    fmt.Println(helloMessage)
+	config.Conf()
+	router := gin.Default()
+	router.Use(cors.Default())
+	listEndpoint := []endpoint{
+		//Paylist Endpoint
+		{Method: "GET", URL: "/paylist", Description: "Get/Fetch All Paylist Data"},
+		{Method: "GET", URL: "/paylist/:id", Description: "Get/Fetch Single Paylist Data by ID"},
+		{Method: "POST", URL: "/paylist", Description: "Create/Insert User-Paylist Data"},
+		{Method: "PUT", URL: "/paylist/:id", Description: "Edit/Update Paylist Data by ID"},
+		{Method: "DELETE", URL: "/paylist/:id", Description: "Delete User-Paylist Data by ID"},
+	}
 
-    args := os.Args
-    getCityCoordinates(args[0])
-}
+	router.GET("/", func(c *gin.Context) {
+		util.CallSuccessOK(c, "RushTravel-API available endpoint", listEndpoint)
+	})
 
-func getCityCoordinates(city string) {
-    fmt.Println("Fetching langitude and longitude of the city ...")
-    resp, err := http.Get(googleApiUri + city)
+	router.POST("/order", ep.CreateOrder)
+	router.GET("/order", ep.FetchOrder)
+	// router.POST("/paylist", ep.Auth, ep.CreateUserPaylist)
+	// router.PUT("/status/:id", ep.Auth, ep.UpdateUserPaylistStatus)
+	// router.PUT("/paylist/:id", ep.Auth, ep.UpdateUserPaylist)
+	// router.DELETE("/paylist/:id", ep.Auth, ep.DeleteUserPaylist)
 
-    if err != nil {
-        log.Fatal("Fetching google api uri data error: ", err)
-    }
+	// router.GET("/user/:id", ep.Auth, ep.FetchSingleUser)
+	router.GET("/users", ep.FetchAllUser)
+	// router.GET("/users/signout", ep.Logout)
+	// router.POST("/user/signin", ep.Login)
+	router.POST("/user/signup", ep.CreateUser)
+	// router.POST("/addsaldo", ep.Auth, ep.AddBalance)
+	// router.PUT("/user/:id", ep.Auth, ep.UpdateUser)
+	// router.PUT("/editpassword/:id", ep.Auth, ep.EditPassword)
+	// router.DELETE("/user/:id", ep.Auth, ep.DeleteUser)
 
-    bytes, err := ioutil.ReadAll(resp.Body)
-    defer resp.Body.Close()
-    if err != nil {
-        log.Fatal("Reading google api data error: ", err)
-    }
-
-    var data googleApiResponse
-    json.Unmarshal(bytes, &data)
-    fmt.Println(data.Results[0].Geometry.Location.Latitude)
-
-    fmt.Println("Fetching langitude and longitude ended successful ...")
+	// router.GET("/income", ep.Auth, ep.FetchAllIncome)
+	// router.PUT("/income/:id",ep.Auth, ep.UpdateIncome)
+	// router.DELETE("/income/:id", ep.Auth, ep.DeleteIncome)
+	router.Run(":8000")
 }
