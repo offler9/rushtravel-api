@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 	"github.com/rush-travel/util"
@@ -40,8 +42,8 @@ type Order struct {
 	NoOfPassangers int            `gorm:"column:no_off_passangers" json:"no_off_passangers"`
 	Price          int            `gorm:"column:price" json:"price"`
 	VehicleType    string         `gorm:"column:vehicle_type" json:"vehicle_type"`
-	Status string `json:"status"`
-	Note string `json:"note"`
+	Status         string         `json:"status"`
+	Note           string         `json:"note"`
 }
 
 func CreateOrder(c *gin.Context) {
@@ -62,7 +64,7 @@ func CreateOrder(c *gin.Context) {
 	Date, _ := time.Parse("2006-01-02", c.PostForm("date"))
 	NoOffPass, _ := strconv.Atoi(c.PostForm("no_off_passangers"))
 	Price, _ := strconv.Atoi(c.PostForm("price"))
-
+	fmt.Println(Date)
 	//
 	pickUpLoc := map[string]interface{}{
 		"Latitude":  lat,
@@ -78,7 +80,7 @@ func CreateOrder(c *gin.Context) {
 		buffer.WriteString(string(pick) + " ")
 	}
 	s := strings.TrimSpace(buffer.String())
-	fmt.Println("s",s)
+	fmt.Println("s", s)
 	ss := []string{s}
 	// json.Unmarshal([]byte(s), &cor)
 	fmt.Println("s", ss)
@@ -87,7 +89,7 @@ func CreateOrder(c *gin.Context) {
 		"Latitude":  lati,
 		"Longitude": long,
 	}
-	fmt.Println(" d ",dropOffLoc)
+	fmt.Println(" d ", dropOffLoc)
 	for _, dropOffLoc := range dropOffLoc {
 		drop, err = json.Marshal(dropOffLoc)
 		if err != nil {
@@ -112,7 +114,7 @@ func CreateOrder(c *gin.Context) {
 	//fmt.Println(ID)
 
 	createorder := Order{
-		OrderId:        ID,
+		OrderId:        "RO" + ID,
 		Username:       "tes",
 		PickUpLoc:      ss,
 		DropOffLoc:     dd,
@@ -121,7 +123,7 @@ func CreateOrder(c *gin.Context) {
 		Price:          Price,
 		NoOfPassangers: NoOffPass,
 		VehicleType:    c.PostForm("vehicle_type"),
-		Status: "waiting",
+		Status:         "waiting",
 	}
 	err = config.DB.Model(&ord).Save(&createorder).Error
 	if err != nil {
@@ -161,19 +163,72 @@ func FetchOrder(c *gin.Context) {
 	util.CallSuccessOK(c, "Fetch All Orders Data ", order1)
 }
 
-func UpdateOrderStatus(c *gin.Context){
+func FetchSingleOrder(c *gin.Context) {
+	var order model.Order
+	id := c.Param("id")
+
+	config.DB.First(&order, id)
+	if order.ID == 0 {
+		util.CallErrorNotFound(c, "order not found, make sure to specify the id", nil)
+		return
+	}
+	tk := User{}
+	tokenString := c.GetHeader("Authorization")
+	token, err := jwt.ParseWithClaims(tokenString, &tk, func(token *jwt.Token) (interface{}, error) {
+		return []byte(fmt.Sprintf(conf.JWTSignature)), nil
+	})
+	if err != nil || token == nil {
+		fmt.Println(err, token)
+		util.CallServerError(c, "fail to parse the token, make sure token is valid", err)
+		return
+	}
+	username := tk.Username
+
+	err = config.DB.Model(&order).Where("ID = ? and username = ?", id, username).Find(&order).Error
+	if err != nil {
+		util.CallErrorNotFound(c, "no order found", err)
+		return
+	}
+	util.CallSuccessOK(c, "Success fetch Data", nil)
+}
+func FetchOrderByDate(c *gin.Context) {
+	var order model.Order
+	startTime, err := time.Parse("2006-01-02 15:04:05", c.PostForm("date")+" 00:00:00")
+	fmt.Println(startTime)
+	if err != nil {
+		util.CallServerError(c, "Failed parse input date", errors.New("Failed parse input date"))
+		return
+	}
+
+	endTime, err := time.Parse("2006-01-02 15:04:05", c.PostForm("date")+" 23:59:59")
+	fmt.Println(endTime)
+	if err != nil {
+		util.CallServerError(c, "Failed parse input date", errors.New("Failed parse input date"))
+		return
+	}
+
+	err = config.DB.Model(&order).Where("created_at BETWEEN ? AND ?", startTime,endTime).Find(&order).Error
+	if err != nil {
+		fmt.Println("error", err)
+		util.CallErrorNotFound(c, "Failed to Get Data", nil)
+		return
+	}
+	util.CallSuccessOK(c, "Success Get Data Order", nil)
+}
+
+func UpdateOrderStatus(c *gin.Context) {
 	var order model.Order
 	id := c.Param("id")
 	note := c.PostForm("note")
-	status :=c.PostForm("status")
+	status := c.PostForm("status")
 
 	update := model.Order{
-		Note: note,
+		Note:   note,
 		Status: status,
 	}
-	err:= config.DB.Model(&order).Where("ID = ? ", id).Update(&update).Error
+	err := config.DB.Model(&order).Where("ID = ? ", id).Update(&update).Error
 	if err != nil {
-		util.CallServerError(c,"failed when to try update order status", nil)
+		util.CallServerError(c, "failed when to try update order status", nil)
 	}
-	util.CallSuccessOK(c,"Successfully Update Order Status",nil)
+	util.CallSuccessOK(c, "Successfully Update Order Status", nil)
 }

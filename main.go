@@ -34,7 +34,7 @@ func main() {
 
 	router.POST("/order", ep.CreateOrder)
 	router.GET("/order", ep.FetchOrder)
-	// router.POST("/paylist", ep.Auth, ep.CreateUserPaylist)
+	router.GET("/order/createdat", ep.FetchOrderByDate)
 	// router.PUT("/status/:id", ep.Auth, ep.UpdateUserPaylistStatus)
 	// router.PUT("/paylist/:id", ep.Auth, ep.UpdateUserPaylist)
 	// router.DELETE("/paylist/:id", ep.Auth, ep.DeleteUserPaylist)
@@ -44,7 +44,7 @@ func main() {
 	// router.GET("/users/signout", ep.Logout)
 	// router.POST("/user/signin", ep.Login)
 	router.POST("/user/signup", ep.CreateUser)
-	// router.POST("/addsaldo", ep.Auth, ep.AddBalance)
+	// \\router.POST("/addsaldo", ep.Auth, ep.AddBalance)
 	// router.PUT("/user/:id", ep.Auth, ep.UpdateUser)
 	// router.PUT("/editpassword/:id", ep.Auth, ep.EditPassword)
 	// router.DELETE("/user/:id", ep.Auth, ep.DeleteUser)
